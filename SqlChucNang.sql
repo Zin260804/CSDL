@@ -157,6 +157,15 @@ UPDATE ViTri
                 Ngan = @Ngan
             WHERE MaVT = @MaVT;
 end;
+CREATE PROC Proc_TimKiemViTri
+@MaVT nvarchar(10)
+AS
+BEGIN
+    SELECT *
+    FROM ViTri
+    WHERE MaVT = @MaVT;
+END;
+
 --TacGia
 Create View View_TacGia as
 Select* From TacGia;
