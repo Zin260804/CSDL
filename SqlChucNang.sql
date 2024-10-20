@@ -127,15 +127,26 @@ CREATE VIEW View_ViTri AS
 SELECT *  
 FROM ViTri
 
-Create PROC Proc_ThemViTri
-@MaVT nvarchar(10),
-@KhuVuc nvarchar(20),
-@Ke nvarchar(20),
-@Ngan nvarchar(20)
-as
-begin
-insert into ViTri(MaVT,Ke,KhuVuc,Ngan) values (@MaVT, @Ke, @KhuVuc, @Ngan);
-end;
+ALTER PROCEDURE Proc_ThemViTri_AutoMaVT
+    @KhuVuc nvarchar(20) = NULL,
+    @Ke nvarchar(20) = NULL,
+    @Ngan nvarchar(20) = NULL
+AS
+BEGIN
+    DECLARE @NewMaVT nvarchar(10);
+    SELECT @NewMaVT = MAX(MaVT) FROM ViTri;
+    IF @NewMaVT IS NULL
+        SET @NewMaVT = 'VT1';
+    ELSE
+        SET @NewMaVT = 'VT' + CAST(CAST(SUBSTRING(@NewMaVT, 3, LEN(@NewMaVT)-2) AS int) + 1 AS varchar);
+
+    IF @KhuVuc IS NOT NULL AND @Ke IS NOT NULL AND @Ngan IS NOT NULL
+    BEGIN
+        INSERT INTO ViTri(MaVT, KhuVuc, Ke, Ngan) 
+        VALUES (@NewMaVT, @KhuVuc, @Ke, @Ngan);
+    END
+    SELECT @NewMaVT AS NewMaVT;
+END;
 
 Create proc Proc_XoaViTri
 @MaVT nvarchar(10)
@@ -157,14 +168,19 @@ UPDATE ViTri
                 Ngan = @Ngan
             WHERE MaVT = @MaVT;
 end;
-CREATE PROC Proc_TimKiemViTri
-@MaVT nvarchar(10)
+
+CREATE FUNCTION Func_TimKiemViTri
+(
+    @MaVT nvarchar(10)
+)
+RETURNS TABLE
 AS
-BEGIN
+RETURN
+(
     SELECT *
     FROM ViTri
-    WHERE MaVT = @MaVT;
-END;
+    WHERE MaVT = @MaVT
+);
 
 --TacGia
 Create View View_TacGia as
