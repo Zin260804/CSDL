@@ -1,4 +1,4 @@
---DauSach 
+﻿--DauSach 
 Create View View_DauSach as
 Select* From DauSach
 
@@ -42,22 +42,57 @@ SELECT *
 FROM  dbo.NhaXuatBan
 
 CREATE PROCEDURE Proc_ThemNhaXuatBan
-	@MaNXB VARCHAR(10),      
-    @Ten NVARCHAR(100),         
-    @DiaChi NVARCHAR(255),      
-    @Email VARCHAR(100),         
+    @Ten NVARCHAR(100),
+    @DiaChi NVARCHAR(255),
+    @Email VARCHAR(100),
     @Sdt VARCHAR(10)
 AS
 BEGIN
-	INSERT INTO NhaXuatBan (MaNXB, Ten, DiaChi, Email, Sdt)
-	VALUES (@MaNXB, @Ten, @DiaChi, @Email, @Sdt)
-END
+    DECLARE @MaxMaNXB VARCHAR(10);
+    DECLARE @NewMaNXB VARCHAR(10);
+    DECLARE @NumericPart INT;
+
+    -- Lấy mã NXB lớn nhất hiện có
+    SELECT @MaxMaNXB = MAX(MaNXB)
+    FROM NhaXuatBan
+    WHERE MaNXB LIKE 'NXB%';
+
+    -- Nếu không có mã nào, bắt đầu từ NXB001
+    IF @MaxMaNXB IS NULL
+        SET @NewMaNXB = 'NXB001';
+    ELSE
+    BEGIN
+        -- Lấy phần số trong mã NXB hiện tại và tăng lên 1
+        SET @NumericPart = CAST(SUBSTRING(@MaxMaNXB, 4, LEN(@MaxMaNXB) - 3) AS INT) + 1;
+
+        -- Tạo mã NXB mới với định dạng NXB### (điền đủ 3 số)
+        SET @NewMaNXB = 'NXB' + RIGHT('000' + CAST(@NumericPart AS VARCHAR(3)), 3);
+    END
+
+    -- Thêm nhà xuất bản mới vào bảng
+    INSERT INTO NhaXuatBan (MaNXB, Ten, DiaChi, Email, Sdt)
+    VALUES (@NewMaNXB, @Ten, @DiaChi, @Email, @Sdt);
+END;
 
 CREATE PROCEDURE Proc_XoaNhaXuatBan
 	@MaNXB VARCHAR(10)
 AS
 BEGIN
-	DELETE FROM dbo.NhaXuatBan WHERE NhaXuatBan.MaNXB = @MaNXB
+	BEGIN TRANSACTION 
+		BEGIN TRY 
+			-- Xóa đầu sách theo MaNXB trong bảng DauSach
+			DELETE FROM dbo.DauSach WHERE DauSach.MaNXB = @MaNXB
+			--Xóa nhà xuất bản theo MaNXB trong bảng NhaXuatBan 
+			DELETE FROM dbo.NhaXuatBan WHERE NhaXuatBan.MaNXB = @MaNXB
+			COMMIT TRAN 
+		END TRY 
+ 
+		BEGIN CATCH 
+			ROLLBACK 
+			DECLARE @err NVARCHAR(MAX) 
+			SELECT @err = N'Lỗi' + ERROR_MESSAGE() 
+			RAISERROR(@err, 16, 1) 
+		END CATCH
 END
 
 CREATE PROCEDURE Proc_SuaNhaXuaBan
@@ -68,13 +103,21 @@ CREATE PROCEDURE Proc_SuaNhaXuaBan
     @Sdt VARCHAR(10)
 AS
 BEGIN
-	UPDATE dbo.NhaXuatBan SET 
-	Ten = @Ten,
-	DiaChi = @DiaChi, 
-	Email = @Email, 
-	Sdt = @Sdt
-	WHERE MaNXB = @MaNXB
+	BEGIN TRY  
+		UPDATE dbo.NhaXuatBan SET 
+		Ten = @Ten,
+		DiaChi = @DiaChi, 
+		Email = @Email, 
+		Sdt = @Sdt
+		WHERE MaNXB = @MaNXB
+	END TRY 
+	BEGIN CATCH 
+		DECLARE @err NVARCHAR(MAX) 
+		SELECT @err = N'Lỗi' + ERROR_MESSAGE() 
+		RAISERROR(@err, 16, 1) 
+	END CATCH 
 END
+
 --Doc Gia
 Create View View_DocGia as
 Select* From DocGia;
@@ -246,4 +289,31 @@ Update CuonSach
 	 Where MaCS = @MaCS;
 end;
 
+CREATE PROCEDURE [dbo].[proc_searchNhaXuatBan]     
+    @Ten NVARCHAR(100)       
+AS 
+BEGIN 
+    SELECT * 
+    FROM dbo.NhaXuatBan
+    WHERE Ten LIKE '%' + @Ten + '%'
+END
 
+CREATE TRIGGER TG_TrungTenNXB 
+ON dbo.NhaXuatBan
+AFTER INSERT, UPDATE 
+AS 
+BEGIN 
+    -- Kiểm tra tên nhà xuất bản vừa thêm có bị trùng lặp 
+    IF EXISTS ( 
+        SELECT * 
+        FROM inserted i 
+        JOIN dbo.NhaXuatBan nxb 
+        ON nxb.Ten = i.Ten 
+        WHERE nxb.MaNXB <> i.MaNXB 
+    ) 
+    BEGIN 
+        -- Nếu trùng thì rollback 
+        RAISERROR ('Tên Nhà xuất bản bị trùng', 16, 1); 
+        ROLLBACK TRANSACTION; 
+    END 
+END;
