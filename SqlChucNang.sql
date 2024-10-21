@@ -36,6 +36,7 @@ MaTG = @MaTG,
 MaNXB = @MaNXB
 WHERE MaDS = @MaDS;
 END;
+
 --Nha Xuat Ban
 CREATE VIEW View_NhaXuatBan AS 
 SELECT * 
@@ -122,19 +123,35 @@ END
 Create View View_DocGia as
 Select* From DocGia;
 
-Create Procedure Proc_ThemDocGia
-     @MaDG NVARCHAR(10),
-     @GioiTinh NVARCHAR(10),
-     @Ten NVARCHAR(100),
-     @DiaChi NVARCHAR(255),
-     @Email NVARCHAR(100),
-     @Sdt NVARCHAR(10),
-     @NgaySinh DATE
-As
-Begin 
-     Insert Into DocGia(MaDG,GioiTinh,Ten,DiaChi,Email,Sdt,NgaySinh)	
-	 Values(@MaDG,@GioiTinh,@Ten,@DiaChi,@Email,@Sdt,@NgaySinh);
-end;
+Drop Procedure Proc_ThemDocGia
+CREATE PROCEDURE Proc_ThemDocGia
+    @GioiTinh NVARCHAR(10),
+    @Ten NVARCHAR(100),
+    @DiaChi NVARCHAR(255),
+    @Email NVARCHAR(100),
+    @Sdt NVARCHAR(10),
+    @NgaySinh DATE
+AS
+BEGIN
+    DECLARE @NewMaDG NVARCHAR(10);
+    DECLARE @MaxMaDG NVARCHAR(10);
+    DECLARE @NumberPart INT;
+    SELECT @MaxMaDG = MAX(MaDG) 
+    FROM DocGia
+    WHERE MaDG LIKE 'MDG%';
+    IF @MaxMaDG IS NOT NULL
+    BEGIN
+        SET @NumberPart = CAST(SUBSTRING(@MaxMaDG, 4, LEN(@MaxMaDG) - 3) AS INT);
+        SET @NumberPart = @NumberPart + 1;
+    END
+    ELSE
+    BEGIN
+        SET @NumberPart = 1;
+    END
+    SET @NewMaDG = 'MDG' + RIGHT('000' + CAST(@NumberPart AS NVARCHAR(3)), 3);
+    INSERT INTO DocGia(MaDG, GioiTinh, Ten, DiaChi, Email, Sdt, NgaySinh)
+    VALUES (@NewMaDG, @GioiTinh, @Ten, @DiaChi, @Email, @Sdt, @NgaySinh);
+END;
 
 
 Create Procedure Proc_XoaDocGia
@@ -165,6 +182,20 @@ Begin
 	  NgaySinh =@NgaySinh
 	  Where MaDG =@MaDG;
 end;
+
+CREATE FUNCTION Func_TimKiemDocGia
+(
+    @Ten NVARCHAR(100)
+)
+RETURNS TABLE
+AS
+RETURN
+(
+    SELECT MaDG, GioiTinh, Ten, DiaChi, Email, Sdt, NgaySinh
+    FROM DocGia
+    WHERE Ten LIKE '%' + @Ten + '%'
+);
+
 --ViTri
 CREATE VIEW View_ViTri AS 
 SELECT *  
@@ -228,17 +259,33 @@ RETURN
 --TacGia
 Create View View_TacGia as
 Select* From TacGia;
+Drop Procedure Proc_ThemTacGia
+CREATE PROCEDURE Proc_ThemTacGia
+    @Ten NVARCHAR(100),
+    @Email NVARCHAR(100),
+    @Sdt NVARCHAR(10)
+AS
+BEGIN
+    DECLARE @NewMaTG NVARCHAR(10);
+    DECLARE @MaxMaTG NVARCHAR(10);
+    DECLARE @NumberPart INT;
+    SELECT @MaxMaTG = MAX(MaTG)
+    FROM TacGia
+    WHERE MaTG LIKE 'TG%';
+    IF @MaxMaTG IS NOT NULL
+    BEGIN
+        SET @NumberPart = CAST(SUBSTRING(@MaxMaTG, 3, LEN(@MaxMaTG) - 2) AS INT);
+        SET @NumberPart = @NumberPart + 1;
+    END
+    ELSE
+    BEGIN
+        SET @NumberPart = 1;
+    END
+    SET @NewMaTG = 'TG' + RIGHT('000' + CAST(@NumberPart AS NVARCHAR(3)), 3);
+    INSERT INTO TacGia(MaTG, Ten, Email, Sdt)
+    VALUES (@NewMaTG, @Ten, @Email, @Sdt);
+END;
 
-Create Procedure Proc_ThemTacGia
-     @MaTG NVARCHAR(10),
-     @Ten NVARCHAR(100),
-     @Email NVARCHAR(100),
-     @Sdt NVARCHAR(10)
-As
-Begin 
-     Insert Into TacGia(MaTG,Ten,Email,Sdt)	
-	 Values(@MaTG,@Ten,@Email,@Sdt);
-end;
 
 Create Procedure Proc_XoaTacGia
       @MaTG NVARCHAR(10)
@@ -262,6 +309,19 @@ Begin
 	  Sdt =@Sdt
 	  Where MaTG =@MaTG;
 end;
+
+CREATE FUNCTION Func_TimKiemTacGia
+(
+    @Ten NVARCHAR(100)
+)
+RETURNS TABLE
+AS
+RETURN
+(
+    SELECT MaTG, Ten, Email, Sdt
+    FROM TacGia
+    WHERE Ten LIKE '%' + @Ten + '%'
+);
 --CuonSach
 CREATE VIEW View_ThongTinCuonSach AS
 SELECT 
