@@ -1,7 +1,7 @@
-﻿--DauSach 
+﻿--DauSach---------------------------------------------------------------------
 Create View View_DauSach as
 Select* From DauSach
-
+---------------------------------------------------------------------
 Create Proc Proc_ThemDauSach 
 @MaDS nvarchar(10),
 @Ten nvarchar(100), 
@@ -12,14 +12,14 @@ as
 Begin
 Insert into DauSach(MaDS,Ten,TheLoai,MaTG,MaNXB) values (@MaDS,@Ten,@TheLoai,@MaTG,@MaNXB)
 end
-
+---------------------------------------------------------------------
 Create Proc Proc_XoaDauSach 
 @MaDS nvarchar(10)
 as
 Begin
 Delete from DauSach Where MaDS=@MaDS
 end
-
+---------------------------------------------------------------------
 CREATE PROCEDURE Proc_SuaDauSach
     @MaDS nvarchar(10),
     @Ten nvarchar(100), 
@@ -36,12 +36,11 @@ MaTG = @MaTG,
 MaNXB = @MaNXB
 WHERE MaDS = @MaDS;
 END;
-
---Nha Xuat Ban
+--Nha Xuat Ban---------------------------------------------------------------------
 CREATE VIEW View_NhaXuatBan AS 
 SELECT * 
 FROM  dbo.NhaXuatBan
-
+---------------------------------------------------------------------
 CREATE PROCEDURE Proc_ThemNhaXuatBan
     @Ten NVARCHAR(100),
     @DiaChi NVARCHAR(255),
@@ -74,7 +73,7 @@ BEGIN
     INSERT INTO NhaXuatBan (MaNXB, Ten, DiaChi, Email, Sdt)
     VALUES (@NewMaNXB, @Ten, @DiaChi, @Email, @Sdt);
 END;
-
+------------------------------------------------------------------------------------------------------------------------------------------
 CREATE PROCEDURE Proc_XoaNhaXuatBan
 	@MaNXB VARCHAR(10)
 AS
@@ -95,8 +94,17 @@ BEGIN
 			RAISERROR(@err, 16, 1) 
 		END CATCH
 END
-
-CREATE PROCEDURE Proc_SuaNhaXuaBan
+---------------------------------------------------------------------
+CREATE PROCEDURE [dbo].[Proc_TimNhaXuatBan]     
+    @Ten NVARCHAR(100)       
+AS 
+BEGIN 
+    SELECT * 
+    FROM dbo.NhaXuatBan
+    WHERE Ten LIKE '%' + @Ten + '%'
+END
+---------------------------------------------------------------------
+CREATE PROCEDURE Proc_SuaNhaXuatBan
 	@MaNXB VARCHAR(10),      
     @Ten NVARCHAR(100),         
     @DiaChi NVARCHAR(255),      
@@ -118,12 +126,31 @@ BEGIN
 		RAISERROR(@err, 16, 1) 
 	END CATCH 
 END
+---------------------------------------------------------------------
+CREATE TRIGGER TG_TrungTenNXB 
+ON dbo.NhaXuatBan
+AFTER INSERT, UPDATE 
+AS 
+BEGIN 
+    -- Kiểm tra tên nhà xuất bản vừa thêm có bị trùng lặp 
+    IF EXISTS ( 
+        SELECT * 
+        FROM inserted i 
+        JOIN dbo.NhaXuatBan nxb 
+        ON nxb.Ten = i.Ten 
+        WHERE nxb.MaNXB <> i.MaNXB 
+    ) 
+    BEGIN 
+        -- Nếu trùng thì rollback 
+        RAISERROR ('Tên Nhà xuất bản bị trùng', 16, 1); 
+        ROLLBACK TRANSACTION; 
+    END 
+END;
 
---Doc Gia
+--Doc Gia---------------------------------------------------------------------
 Create View View_DocGia as
 Select* From DocGia;
-
-Drop Procedure Proc_ThemDocGia
+---------------------------------------------------------------------
 CREATE PROCEDURE Proc_ThemDocGia
     @GioiTinh NVARCHAR(10),
     @Ten NVARCHAR(100),
@@ -152,8 +179,7 @@ BEGIN
     INSERT INTO DocGia(MaDG, GioiTinh, Ten, DiaChi, Email, Sdt, NgaySinh)
     VALUES (@NewMaDG, @GioiTinh, @Ten, @DiaChi, @Email, @Sdt, @NgaySinh);
 END;
-
-
+---------------------------------------------------------------------
 Create Procedure Proc_XoaDocGia
       @MaDG NVARCHAR(10)
 as
@@ -161,7 +187,7 @@ Begin
       Delete From DocGia
 	  where MaDG = @MaDG;
 end;
-
+---------------------------------------------------------------------
 Create Procedure Proc_SuaDocGia
      @MaDG NVARCHAR(10),
      @GioiTinh NVARCHAR(10),
@@ -182,7 +208,7 @@ Begin
 	  NgaySinh =@NgaySinh
 	  Where MaDG =@MaDG;
 end;
-
+---------------------------------------------------------------------
 CREATE FUNCTION Func_TimKiemDocGia
 (
     @Ten NVARCHAR(100)
@@ -195,13 +221,12 @@ RETURN
     FROM DocGia
     WHERE Ten LIKE '%' + @Ten + '%'
 );
-
---ViTri
+--ViTri---------------------------------------------------------------------
 CREATE VIEW View_ViTri AS 
 SELECT *  
 FROM ViTri
-
-ALTER PROCEDURE Proc_ThemViTri_AutoMaVT
+---------------------------------------------------------------------
+Create PROCEDURE Proc_ThemViTri 
     @KhuVuc nvarchar(20) = NULL,
     @Ke nvarchar(20) = NULL,
     @Ngan nvarchar(20) = NULL
@@ -221,7 +246,7 @@ BEGIN
     END
     SELECT @NewMaVT AS NewMaVT;
 END;
-
+---------------------------------------------------------------------
 Create proc Proc_XoaViTri
 @MaVT nvarchar(10)
 as
@@ -256,17 +281,17 @@ RETURN
     WHERE MaVT = @MaVT
 );
 
---TacGia
+--TacGia---------------------------------------------------------------------
 Create View View_TacGia as
 Select* From TacGia;
-Drop Procedure Proc_ThemTacGia
+---------------------------------------------------------------------
 CREATE PROCEDURE Proc_ThemTacGia
     @Ten NVARCHAR(100),
     @Email NVARCHAR(100),
     @Sdt NVARCHAR(10)
 AS
 BEGIN
-    DECLARE @NewMaTG NVARCHAR(10);
+    DECLARE @NewMaTG NVARCHAR(10);  
     DECLARE @MaxMaTG NVARCHAR(10);
     DECLARE @NumberPart INT;
     SELECT @MaxMaTG = MAX(MaTG)
@@ -285,8 +310,7 @@ BEGIN
     INSERT INTO TacGia(MaTG, Ten, Email, Sdt)
     VALUES (@NewMaTG, @Ten, @Email, @Sdt);
 END;
-
-
+---------------------------------------------------------------------
 Create Procedure Proc_XoaTacGia
       @MaTG NVARCHAR(10)
 as
@@ -294,7 +318,7 @@ Begin
       Delete From TacGia
 	  where MaTG = @MaTG;
 end;
-
+---------------------------------------------------------------------
 Create Procedure Proc_SuaTacGia
      @MaTG NVARCHAR(50),  
      @Ten NVARCHAR(100),   
@@ -309,7 +333,7 @@ Begin
 	  Sdt =@Sdt
 	  Where MaTG =@MaTG;
 end;
-
+---------------------------------------------------------------------
 CREATE FUNCTION Func_TimKiemTacGia
 (
     @Ten NVARCHAR(100)
@@ -322,7 +346,7 @@ RETURN
     FROM TacGia
     WHERE Ten LIKE '%' + @Ten + '%'
 );
---CuonSach
+--CuonSach---------------------------------------------------------------------
 CREATE VIEW View_ThongTinCuonSach AS
 SELECT 
     cs.MaCS,                  
@@ -373,32 +397,4 @@ Update CuonSach
 		MaVT = @MaVT
 	 Where MaCS = @MaCS;
 end;
-
-CREATE PROCEDURE [dbo].[proc_searchNhaXuatBan]     
-    @Ten NVARCHAR(100)       
-AS 
-BEGIN 
-    SELECT * 
-    FROM dbo.NhaXuatBan
-    WHERE Ten LIKE '%' + @Ten + '%'
-END
-
-CREATE TRIGGER TG_TrungTenNXB 
-ON dbo.NhaXuatBan
-AFTER INSERT, UPDATE 
-AS 
-BEGIN 
-    -- Kiểm tra tên nhà xuất bản vừa thêm có bị trùng lặp 
-    IF EXISTS ( 
-        SELECT * 
-        FROM inserted i 
-        JOIN dbo.NhaXuatBan nxb 
-        ON nxb.Ten = i.Ten 
-        WHERE nxb.MaNXB <> i.MaNXB 
-    ) 
-    BEGIN 
-        -- Nếu trùng thì rollback 
-        RAISERROR ('Tên Nhà xuất bản bị trùng', 16, 1); 
-        ROLLBACK TRANSACTION; 
-    END 
-END;
+---------------------------------------------------------------------
